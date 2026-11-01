@@ -9,8 +9,8 @@ const STYLE = `
   .site-nav { display: flex; gap: 18px; align-items: center; }
   .site-nav a { text-decoration: none; opacity: .85; }
   .site-nav a:hover { opacity: 1; }
-  .balance { padding: 4px 12px; border-radius: 999px; background: rgba(255,255,255,.12); font-size: 14px; }
-  .balance strong { font-variant-numeric: tabular-nums; }
+  .wallet-pill { padding: 5px 14px; border-radius: 8px; background: #f5c542; color: #14212b; font-size: 14px; }
+  .wallet-pill b { font-variant-numeric: tabular-nums; }
   .page { max-width: 760px; margin: 32px auto; padding: 0 20px; }
   .card { background: #fff; border: 1px solid #dce4e8; border-radius: 12px; padding: 24px; }
   .hero { display: grid; gap: 6px; }
@@ -21,6 +21,7 @@ const STYLE = `
   .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
   .btn { font: inherit; padding: 9px 18px; border-radius: 8px; border: 1px solid #c3cfd6; background: #fff; cursor: pointer; text-decoration: none; display: inline-block; }
   .btn-primary { background: #13806b; border-color: #13806b; color: #fff; }
+  .btn-lg { padding: 12px 26px; font-weight: 600; }
   .status { min-height: 24px; font-weight: 600; }
   .tx-list { list-style: none; padding: 0; margin: 0; }
   .tx { display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid #e6ecef; }
@@ -44,7 +45,7 @@ function layout(title, ctx, body, script = '') {
   <nav class="site-nav" aria-label="Main">
     <a href="/send">Send</a>
     <a href="/history">History</a>
-    <span class="balance">Balance <strong data-testid="wallet-balance">${rupees(ctx.balance)}</strong></span>
+    <span class="wallet-pill">Balance <b data-testid="balance-amount">${rupees(ctx.balance)}</b></span>
   </nav>
 </header>
 <main class="page">
@@ -80,28 +81,28 @@ export function sendPage(ctx) {
   <h1 id="send-title">Send money</h1>
   <form class="send-form" novalidate>
     <div class="field">
-      <label for="to">Recipient</label>
-      <input id="to" name="to" list="contacts" autocomplete="off" placeholder="Name or UPI ID">
+      <label for="payee">Recipient</label>
+      <input id="payee" name="to" list="contacts" autocomplete="off" placeholder="Name or UPI ID">
       <datalist id="contacts">${CONTACTS.map((c) => `<option value="${c}">`).join('')}</datalist>
     </div>
     <div class="field">
-      <label for="amount">Amount</label>
-      <input id="amount" name="amount" type="number" min="1" step="1" placeholder="₹0">
+      <label for="pay-amount">Amount</label>
+      <input id="pay-amount" name="amount" type="number" min="1" step="1" placeholder="₹0">
     </div>
     <div class="field">
       <label for="note">Note</label>
       <input id="note" name="note" placeholder="What is it for?">
     </div>
     <div class="actions">
-      <button class="btn btn-primary" type="submit" data-testid="send-money">Send money</button>
-      <button class="btn" type="button" data-testid="request-money">Request money</button>
+      <button class="btn btn-primary btn-lg" type="submit" data-testid="pay-button">Send money</button>
+      <button class="btn btn-lg" type="button" data-testid="request-button">Request money</button>
     </div>
   </form>
-  <p class="status" role="status" id="transfer-msg"></p>
+  <p class="status" role="status" id="payment-status"></p>
 </section>`;
   const script = `
 const form = document.querySelector('.send-form');
-const out = document.getElementById('transfer-msg');
+const out = document.getElementById('payment-status');
 const rupees = (n) => '₹' + n.toLocaleString('en-IN');
 const post = (url, data) => fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(data) });
 function fields() {
@@ -115,11 +116,11 @@ form.addEventListener('submit', async (e) => {
   const res = await post('/api/transfers', data);
   const body = await res.json().catch(() => ({}));
   if (!res.ok) return (out.textContent = body.error || 'Something went wrong');
-  document.querySelector('[data-testid="wallet-balance"]').textContent = rupees(body.balance);
+  document.querySelector('[data-testid="balance-amount"]').textContent = rupees(body.balance);
   out.textContent = 'Sent ' + rupees(body.transfer.amount) + ' to ' + body.transfer.to;
   form.reset();
 });
-document.querySelector('[data-testid="request-money"]').addEventListener('click', async () => {
+document.querySelector('[data-testid="request-button"]').addEventListener('click', async () => {
   track('click:request');
   const data = fields();
   const res = await post('/api/requests', data);
@@ -139,7 +140,7 @@ export function historyPage(transfers, requests, ctx) {
   const items = rows.map((r) => `<li class="tx"><span>${r.who}</span>${r.amount}</li>`).join('\n');
   const body = `<section class="card" aria-labelledby="history-title">
   <h1 id="history-title">History</h1>
-  ${rows.length ? `<ol class="tx-list" id="history" aria-label="Transaction history">\n${items}\n</ol>` : '<p class="muted">No transactions yet</p>'}
+  ${rows.length ? `<ol class="tx-list tx-list--cards" id="tx-feed" aria-label="Transaction history">\n${items}\n</ol>` : '<p class="muted">No transactions yet</p>'}
 </section>`;
   return layout('History', ctx, body);
 }
