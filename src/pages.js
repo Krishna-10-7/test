@@ -93,8 +93,8 @@ export function sendPage(ctx) {
       <input id="note" name="note" placeholder="What is it for?">
     </div>
     <div class="actions">
-      <button class="btn btn-primary" type="submit" data-testid="send-money">Send money</button>
-      <button class="btn" type="button" data-testid="request-money">Request money</button>
+      <button class="btn btn-primary" type="button" data-testid="action-1">Send money</button>
+      <button class="btn" type="submit" data-testid="action-2">Request money</button>
     </div>
   </form>
   <p class="status" role="status" id="transfer-msg"></p>
@@ -119,7 +119,7 @@ form.addEventListener('submit', async (e) => {
   out.textContent = 'Sent ' + rupees(body.transfer.amount) + ' to ' + body.transfer.to;
   form.reset();
 });
-document.querySelector('[data-testid="request-money"]').addEventListener('click', async () => {
+document.querySelector('[data-testid="action-1"]').addEventListener('click', async () => {
   track('click:request');
   const data = fields();
   const res = await post('/api/requests', data);
