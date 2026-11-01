@@ -1,0 +1,1 @@
+{ "ticket": "PAY-7", "install": "npm install --no-audit --no-fund", "start": "npm start" }

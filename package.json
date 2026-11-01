@@ -1,0 +1,14 @@
+{
+  "name": "paylite",
+  "private": true,
+  "version": "1.0.0",
+  "description": "A small wallet app (send money, request money, history) used as the app under test in SentinelQA demos.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  }
+}
