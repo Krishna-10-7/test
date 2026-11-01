@@ -22,13 +22,24 @@ export function validate(to, amount) {
   return null;
 }
 
-export function sendMoney(sid, to, amount, note) {
-  const s = session(sid);
+/** Reserves the amount so two transfers in flight cannot spend the same money. */
+function hold(s, amount) {
   if (amount > s.balance) throw Object.assign(new Error('Not enough balance'), { status: 422 });
   s.balance -= amount;
-  const transfer = { id: nextTransferId++, to, amount, note, at: new Date().toISOString() };
+  return { amount };
+}
+
+/** Completes a held transfer and records it. */
+function settle(s, h, to, note) {
+  s.balance -= h.amount;
+  const transfer = { id: nextTransferId++, to, amount: h.amount, note, at: new Date().toISOString() };
   s.transfers.unshift(transfer);
   return transfer;
+}
+
+export function sendMoney(sid, to, amount, note) {
+  const s = session(sid);
+  return settle(s, hold(s, amount), to, note);
 }
 
 export function requestMoney(sid, from, amount, note) {
