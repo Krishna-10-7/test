@@ -9,8 +9,8 @@ const STYLE = `
   .site-nav { display: flex; gap: 18px; align-items: center; }
   .site-nav a { text-decoration: none; opacity: .85; }
   .site-nav a:hover { opacity: 1; }
-  .balance { padding: 4px 12px; border-radius: 999px; background: rgba(255,255,255,.12); font-size: 14px; }
-  .balance strong { font-variant-numeric: tabular-nums; }
+  .wallet-pill { padding: 5px 14px; border-radius: 8px; background: #f5c542; color: #14212b; font-size: 14px; }
+  .wallet-pill b { font-variant-numeric: tabular-nums; }
   .page { max-width: 760px; margin: 32px auto; padding: 0 20px; }
   .card { background: #fff; border: 1px solid #dce4e8; border-radius: 12px; padding: 24px; }
   .hero { display: grid; gap: 6px; }
@@ -42,9 +42,9 @@ function layout(title, ctx, body, script = '') {
 <header class="site-header">
   <a href="/" class="logo">PayLite</a>
   <nav class="site-nav" aria-label="Main">
-    <a href="/send">Send</a>
-    <a href="/history">History</a>
-    <span class="balance">Balance <strong data-testid="wallet-balance">${rupees(ctx.balance)}</strong></span>
+    <a href="/send">Pay</a>
+    <a href="/history">Activity</a>
+    <span class="wallet-pill">Wallet <b data-testid="balance-amount">${rupees(ctx.balance)}</b></span>
   </nav>
 </header>
 <main class="page">
@@ -68,8 +68,8 @@ export function homePage(s, ctx) {
   <p class="amount">${rupees(ctx.balance)}</p>
   <p class="muted">${last ? `Last sent ${rupees(last.amount)} to ${esc(last.to)}` : 'No transfers yet'}</p>
   <div class="actions">
-    <a class="btn btn-primary" href="/send">Send money</a>
-    <a class="btn" href="/history">See history</a>
+    <a class="btn btn-primary" href="/send">Pay now</a>
+    <a class="btn" href="/history">See activity</a>
   </div>
 </section>`;
   return layout('Wallet', ctx, body);
@@ -77,31 +77,31 @@ export function homePage(s, ctx) {
 
 export function sendPage(ctx) {
   const body = `<section class="card" aria-labelledby="send-title">
-  <h1 id="send-title">Send money</h1>
+  <h1 id="send-title">Pay someone</h1>
   <form class="send-form" novalidate>
     <div class="field">
-      <label for="to">Recipient</label>
-      <input id="to" name="to" list="contacts" autocomplete="off" placeholder="Name or UPI ID">
+      <label for="payee">Pay to</label>
+      <input id="payee" name="to" list="contacts" autocomplete="off" placeholder="Name or UPI ID">
       <datalist id="contacts">${CONTACTS.map((c) => `<option value="${c}">`).join('')}</datalist>
     </div>
     <div class="field">
-      <label for="amount">Amount</label>
-      <input id="amount" name="amount" type="number" min="1" step="1" placeholder="₹0">
+      <label for="pay-amount">Amount</label>
+      <input id="pay-amount" name="amount" type="number" min="1" step="1" placeholder="₹0">
     </div>
     <div class="field">
-      <label for="note">Note</label>
-      <input id="note" name="note" placeholder="What is it for?">
+      <label for="pay-note">Note</label>
+      <input id="pay-note" name="note" placeholder="What is it for?">
     </div>
     <div class="actions">
-      <button class="btn btn-primary" type="submit" data-testid="send-money">Send money</button>
-      <button class="btn" type="button" data-testid="request-money">Request money</button>
+      <button class="btn btn-primary" type="submit" data-testid="pay-now">Pay now</button>
+      <button class="btn" type="button" data-testid="request">Request</button>
     </div>
   </form>
-  <p class="status" role="status" id="transfer-msg"></p>
+  <p class="status" role="status" id="pay-status"></p>
 </section>`;
   const script = `
 const form = document.querySelector('.send-form');
-const out = document.getElementById('transfer-msg');
+const out = document.getElementById('pay-status');
 const rupees = (n) => '₹' + n.toLocaleString('en-IN');
 const post = (url, data) => fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(data) });
 function fields() {
@@ -115,11 +115,11 @@ form.addEventListener('submit', async (e) => {
   const res = await post('/api/transfers', data);
   const body = await res.json().catch(() => ({}));
   if (!res.ok) return (out.textContent = body.error || 'Something went wrong');
-  document.querySelector('[data-testid="wallet-balance"]').textContent = rupees(body.balance);
+  document.querySelector('[data-testid="balance-amount"]').textContent = rupees(body.balance);
   out.textContent = 'Sent ' + rupees(body.transfer.amount) + ' to ' + body.transfer.to;
   form.reset();
 });
-document.querySelector('[data-testid="request-money"]').addEventListener('click', async () => {
+document.querySelector('[data-testid="request"]').addEventListener('click', async () => {
   track('click:request');
   const data = fields();
   const res = await post('/api/requests', data);
@@ -128,7 +128,7 @@ document.querySelector('[data-testid="request-money"]').addEventListener('click'
   out.textContent = 'Requested ' + rupees(body.request.amount) + ' from ' + body.request.from;
   form.reset();
 });`;
-  return layout('Send money', ctx, body, script);
+  return layout('Pay', ctx, body, script);
 }
 
 export function historyPage(transfers, requests, ctx) {
@@ -138,10 +138,10 @@ export function historyPage(transfers, requests, ctx) {
   ].sort((a, b) => b.at.localeCompare(a.at));
   const items = rows.map((r) => `<li class="tx"><span>${r.who}</span>${r.amount}</li>`).join('\n');
   const body = `<section class="card" aria-labelledby="history-title">
-  <h1 id="history-title">History</h1>
-  ${rows.length ? `<ol class="tx-list" id="history" aria-label="Transaction history">\n${items}\n</ol>` : '<p class="muted">No transactions yet</p>'}
+  <h1 id="history-title">Activity</h1>
+  ${rows.length ? `<ol class="tx-list" id="activity" aria-label="Recent activity">\n${items}\n</ol>` : '<p class="muted">No transactions yet</p>'}
 </section>`;
-  return layout('History', ctx, body);
+  return layout('Activity', ctx, body);
 }
 
 export function notFoundPage(ctx) {
